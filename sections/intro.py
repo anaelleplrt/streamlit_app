@@ -1,122 +1,150 @@
-# sections/intro.py
+"""
+Introduction section: Context, objectives, and data caveats
+"""
+
 import streamlit as st
-import pandas as pd
-
-def render(df, tables, filters):
-    st.header("Introduction & Context")
-
-    st.subheader("Why this topic?")
-    st.markdown(
-        """
-        The ability to **replace worn-out clothes with new ones** (excluding second-hand)
-        is a tangible indicator of **living standards**.  
-        The inability to do so reflects **material deprivation**, monitored by Eurostat
-        through the European social statistics survey (EU-SILC).  
-        This dashboard aims to make **differences between countries** and between
-        **socio-economic groups** (gender, age, income) visible and to track their **evolution over time**.
-        """
-    )
-
-    st.subheader("Problem statement & objectives")
-    st.markdown(
-        """
-        - **Main question:** Who in Europe **cannot afford** to buy new clothes?  
-          How does this vary **over time**, **across countries**, and **between socio-economic groups**?
-        - **Objectives:**
-          1) Visualize the **multi-year trend**;
-          2) **Compare** countries (map + ranking);
-          3) Highlight differences by **gender**, **age**, and **income**;
-          4) Provide **actionable insights** for policy makers, NGOs, and the media.
-        """
-    )
-
-    st.subheader("Data source")
-    st.markdown(
-        """
-        - **Eurostat** — *Persons who cannot afford to replace worn-out clothes by some new (not second-hand) ones by age, sex and income group*.  
-        - **Unit**: `PC` → **percentage of people** concerned (*only `unit = PC` is kept*).  
-        - **Frequency**: `A` → annual.  
-        """
-    )
-
-    # -------------------------------
-    # DATASET PREVIEW
-    # -------------------------------
-    st.subheader("Dataset preview")
-    st.dataframe(df.sample(20, random_state=42))
-
-    # -------------------------------
-    # DATA COVERAGE
-    # -------------------------------
-    st.subheader("Coverage & time period")
-    years = sorted(pd.Series(df.get("year")).dropna().unique().tolist())
-    countries = sorted(pd.Series(df.get("geo")).dropna().unique().tolist())
-    incomes = sorted(pd.Series(df.get("incgrp_label")).dropna().unique().tolist()) if "incgrp_label" in df.columns else []
-    ages = sorted(pd.Series(df.get("age_bucket_label")).dropna().unique().tolist()) if "age_bucket_label" in df.columns else []
-    st.markdown(
-        f"""
-        - **Time span**: {years[0] if years else "?"} → {years[-1] if years else "?"}  
-        - **Number of countries**: {len(countries)}  
-        - **Income groups available**: {", ".join(incomes) if incomes else "—"}  
-        - **Age groups (buckets)**: {", ".join(ages) if ages else "—"}
-        """
-    )
-
-    # -------------------------------
-    # COLUMN MEANING
-    # -------------------------------
-    st.subheader("Column definitions (in this project)")
-    st.markdown(
-        """
-        | Column           | Meaning |
-        |------------------|---------|
-        | `DATAFLOW`       | Eurostat technical identifier (traceability). |
-        | `LAST UPDATE`    | Last update timestamp from Eurostat (not used). |
-        | `freq`           | Frequency (`A` = annual). |
-        | `unit`           | Unit (`PC` = percentage). |
-        | `geo`            | Country (ISO-2 code: FR, DE, IT…). |
-        | `TIME_PERIOD`    | Year as text → converted to `year` (integer). |
-        | `year`           | Year (integer) used in charts. |
-        | `OBS_VALUE`      | % of people declaring they cannot afford to buy new clothes. |
-        | `sex`            | Raw sex code: `M`, `F`, `T`. |
-        | `sex_label`      | Human-readable: Men, Women, Total. |
-        | `age`            | Raw age code (may vary by country/year). |
-        | `age_bucket_label` | Standardized 9 age groups: Total, <18, 18–24, 25–34, 35–44, 45–54, 55–64, 65–74, ≥75. |
-        | `incgrp`         | Income group raw code (`A_MD60`, `B_MD60`, `TOTAL`). |
-        | `incgrp_label`   | Income group readable: Below 60% median (`B_MD60`), Above 60% median (`A_MD60`), Total. |
-        | `iso3`           | ISO-3 country code (needed for the choropleth map). |
-        | `OBS_FLAG`       | Data quality flag (empty in this dataset). |
-        | `CONF_STATUS`    | Confidence status (empty in this dataset). |
-        """
-    )
-
-    st.info(
-        "**Age:** Eurostat provides heterogeneous codes depending on country and year. "
-        "To avoid an endless list, all variants were automatically grouped "
-        "into 9 standardized buckets (`age_bucket_label`)."
-    )
+from utils.io import get_license_info
 
 
-    # -------------------------------
-    # FILTERS
-    # -------------------------------
-    st.subheader("Application filters (sidebar)")
-    st.markdown(
-        """
-        **Filter logic**: all filters are applied with a logical **AND** (country ∩ gender ∩ age ∩ income).  
-        - **Country** (`geo`) — multi-select of ISO-2 codes.  
-        - **Gender** (`sex_label`) — `Total`, `Women`, `Men`.  
-        - **Age** (`age_bucket_label`) — **9 standardized categories**: `Total`, `<18`, `18–24`, `25–34`, `35–44`, `45–54`, `55–64`, `65–74`, `≥75`.  
-        - **Income group** (`incgrp_label`) — `Below 60% of median income — poor households`, `≥60% of median income — non-poor households`, `Total population`.  
-        - **Year** (`year`) — used for the **map** and **ranking**; time series always show the full span.
-        """
-    )
-
-    st.subheader("Dashboard structure")
-    st.markdown(
-        """
-        1. **Overview** — KPIs, country time series, **annual map**, ranking.  
-        2. **Detailed analyses** — gender gap, **age** and **income** gradients, country focus.  
-        3. **Conclusions** — key takeaways, limitations, policy implications.
-        """
-    )
+def render():
+    """Render the introduction section"""
+    
+    # Main title and hook
+    st.markdown("# *How Social Inequalities Shape Chronic Disease in France ?*")
+    
+    st.markdown("---")
+    
+    # Hook - Why this matters
+    st.markdown("## Why This Matters ?")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.markdown("""
+        **Health is not equally distributed in France.** People living in poverty face 
+        dramatically higher rates of chronic diseases : diabetes, heart disease, psychiatric 
+        disorders, and more,compared to wealthier citizens.
+        
+        This dashboard explores the **social determinants of health inequality** using 
+        official data from the French Ministry of Health. We examine how income, education, 
+        occupation, and geography shape who gets sick and who stays healthy.
+        
+        **The central question:** *Why do poor people die younger from chronic diseases?*
+        """)
+    
+    with col2:
+        st.info("""
+        **Key Statistic**
+        
+        People in the poorest 10% of the population have **2-3 times higher** chronic disease 
+        rates compared to the richest 10%.
+        
+        This translates to thousands of preventable deaths each year.
+        """)
+    
+    st.markdown("---")
+    
+    # Context - What you'll discover
+    st.markdown("## What You'll Discover ?")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        **Patterns**
+        - Income gradients in disease
+        - Geographic disparities
+        - Education effects
+        - Intersectional impacts
+        """)
+    
+    with col2:
+        st.markdown("""
+        **Analysis**
+        - Standardized rates
+        - Confidence intervals
+        - Inequality ratios
+        - Statistical validation
+        """)
+    
+    with col3:
+        st.markdown("""
+        **Insights**
+        - Policy implications
+        - Vulnerable populations
+        - Intervention priorities
+        - Research gaps
+        """)
+    
+    st.markdown("---")
+    
+    # Data source and methodology
+    with st.expander("Data Source & Methodology", expanded=False):
+        st.markdown("""
+        ### Data Source
+        
+        This dashboard uses data from **DREES (Direction de la Recherche, des Études, 
+        de l'Évaluation et des Statistiques)**, the research and statistics department 
+        of the French Ministry of Health.
+        
+        **Dataset:** ER 1243 - "Social Inequalities and Chronic Diseases"  
+        **Publication:** "Chronic diseases affect modest people more often and reduce their life expectancy further"  
+        **Year:** Based on 2015-2017 cohort data  
+        **License:** Open License / Licence Ouverte (Etalab)
+        
+        ### Methodology
+        
+        **Standardization:** All rates are standardized by age and sex using direct and 
+        indirect methods. This allows fair comparisons between groups with different 
+        demographic structures.
+        
+        **Confidence Intervals:** 95% confidence intervals are provided for all rates, 
+        reflecting statistical uncertainty.
+        
+        **Data Source:** Administrative health data from CNAM (French National Health Insurance), 
+        covering the entire population.
+        
+        ### Dimensions Analyzed
+        
+        - **Income:** Deciles (D1=poorest 10%, D10=richest 10%)
+        - **Geography:** French metropolitan regions
+        - **Education:** Diploma levels
+        - **Occupation:** Socio-professional categories
+        - **Demographics:** Age groups and gender
+        
+        ### Diseases Tracked
+        
+        The dataset covers chronic diseases from the CNAM disease mapping:
+        - Cardiovascular diseases
+        - Diabetes
+        - Psychiatric disorders
+        - Respiratory diseases
+        - Cancers (categories only, subtypes excluded)
+        - Neurological disorders
+        - And more...
+        """)
+        
+        st.markdown(get_license_info())
+    
+    
+    st.markdown("---")
+    
+    # Navigation guide
+    st.markdown("## Dashboard Guide")
+    
+    st.markdown("""
+    This dashboard is organized into four main sections:
+    
+    1. **Overview** - High-level KPIs and trends
+    2. **Data Quality** - Validation and methodology details
+    3. **Deep Dives** - Detailed comparisons and distributions
+    4. **Conclusions** - Key insights and implications
+    
+    Use the **sidebar controls** to filter by disease, rate type, and demographic dimensions.
+    All charts are **interactive**—hover for details, click legends to filter.
+    """)
+    
+    st.success("""
+    **Ready to explore?** Use the sidebar to select a disease and start discovering 
+    patterns of health inequality in France.
+    """)
